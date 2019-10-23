@@ -78,7 +78,10 @@ logger = register_slack_logger_handler('https://hooks.slack.com/services/some-ch
 logger.warning('something happened!')  # check slack :)
 ```
 
-## Extend your exceptions to add markdown to notifications
+## Extend your exceptions to create markdown notifications
+The handler formatter will look for a method `get_slack_text()`
+without arguments and returning a string implemented 
+on your exceptions.
 ````python
 from mylib import create_model_url
 
