@@ -1,0 +1,2 @@
+class SlackPayloadError(Exception):
+    pass
