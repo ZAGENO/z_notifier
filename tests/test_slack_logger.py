@@ -37,11 +37,11 @@ class SlackLoggerTestCase(unittest.TestCase):
         payload = formatter.format(self.log_record)
         self.assertDictEqual(payload, {
             'webhook_url': self.webhook_url,
-            'header': 'WARNING',
+            'header': 'Log Record Message',
             'attachments': [
                 {
                     'color': '#D5A021',
-                    'pretext': 'Log Record Message',
+                    'pretext': 'WARNING',
                     'title': 'Log Record Message',
                     'text': 'Log Record Message'
                 }
@@ -58,3 +58,27 @@ class SlackLoggerTestCase(unittest.TestCase):
         logger.exception(KeyError('some key error'))
 
         self.assertEqual(mock_send_message.call_count, 1)
+
+    def test_formatter_accepts_config(self):
+        """Test that LoggerSlackFormatter returns payload using config when it's passed as argument"""
+        log_record = logging.LogRecord('name', logging.DEBUG, None, None, 'some msg', None, None)
+        formatter = LoggerSlackFormatter(webhook_url=self.webhook_url, config={'pretext': None})
+        formatted = formatter.format(log_record)
+
+        self.assertEqual(formatted['attachments'][0]['pretext'], None)
+
+        formatter = LoggerSlackFormatter(webhook_url=self.webhook_url, config={'pretext': 'msg'})
+        formatted = formatter.format(log_record)
+
+        self.assertEqual(formatted['attachments'][0]['pretext'], 'some msg')
+
+        formatter = LoggerSlackFormatter(webhook_url=self.webhook_url, config={'header': '__exception_class__'})
+        log_record = logging.LogRecord('name', logging.DEBUG, None, None, ValueError('some value error'), None, None)
+        formatted = formatter.format(log_record)
+
+        self.assertEqual(formatted['header'], 'ValueError')
+
+        formatter = LoggerSlackFormatter(webhook_url=self.webhook_url, config={'header': '[[some arbitrary header]]'})
+        formatted = formatter.format(log_record)
+
+        self.assertEqual(formatted['header'], 'some arbitrary header')
