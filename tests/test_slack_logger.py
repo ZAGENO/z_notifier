@@ -1,5 +1,6 @@
 import unittest
 import logging
+from unittest.mock import patch
 from z_notifier import register_slack_logger_handler, LoggerSlackHandler, LoggerSlackFormatter
 
 
@@ -46,3 +47,14 @@ class SlackLoggerTestCase(unittest.TestCase):
                 }
             ]
         })
+
+    @patch('z_notifier.SlackNotifier.send_message')
+    def test_register_handler_notify_only(self, mock_send_message):
+        """Test that handler registered with notify_only notifies only those types of exceptions"""
+        logger = register_slack_logger_handler(self.webhook_url, notify_only=(ValueError,))
+        logger.handlers = [logger.handlers[-1]]  # remove all other handlers for this test
+        logger.warning('some warning')
+        logger.exception(ValueError('some value error'))  # only this one should be emitted
+        logger.exception(KeyError('some key error'))
+
+        self.assertEqual(mock_send_message.call_count, 1)
