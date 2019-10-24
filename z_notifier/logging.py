@@ -14,10 +14,11 @@ class LoggerSlackHandler(logging.Handler):
 
 
 class LoggerSlackFormatter(logging.Formatter):
-    def __init__(self, fmt=None, datefmt=None, style='%', *, webhook_url=None):
+    def __init__(self, fmt=None, datefmt=None, style='%', *, webhook_url=None, config=None):
         super().__init__(fmt, datefmt, style)
         assert webhook_url is not None, 'webhook_url must be set'
         self.webhook_url = webhook_url
+        self.config = config or {}
 
     def format(self, record):
         return {
@@ -47,18 +48,33 @@ class LoggerSlackFormatter(logging.Formatter):
 
         return '#8F9491'
 
-    @staticmethod
-    def get_header(record):
-        """Return the header of the slack message attachment, which is the severity level of log record"""
-        return record.levelname
-
-    @staticmethod
-    def get_pretext(record):
-        """Return the pretext of the slack message attachment, which is the exception type"""
-        if isinstance(record.msg, Exception):
-            return record.msg.__class__.__name__
+    def get_header(self, record):
+        """
+        Return the header of the slack message attachment
+        Configuration key is prioritised in case it's implemented:
+        - __exception_class__: exception class name
+        - [[arbitrary text]]: arbitrary text
+        - <valid logging.LogRecord attribute>
+        """
+        if 'header' in self.config:
+            if self.config.get('header') == '__exception_class__' and isinstance(record.msg, Exception):
+                return record.msg.__class__.__name__
+            elif self.config.get('header').startswith('[[') and self.config.get('header')[-2:] == ']]':
+                return self.config.get('header')[2:-2]
+            elif hasattr(record, self.config['header']):
+                return getattr(record, self.config['header'])
 
         return record.msg
+
+    def get_pretext(self, record):
+        """Return the pretext of the slack message attachment"""
+        if 'pretext' in self.config:
+            if not self.config.get('pretext'):
+                return None
+
+            return getattr(record, self.config['pretext'])
+
+        return record.levelname
 
     @staticmethod
     def get_title(record):
