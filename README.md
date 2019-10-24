@@ -45,7 +45,7 @@ Creating separate projects for particular logic implementations is a necessary
 step in this direction.
 
 ## Installation
-`pip install git+https://github.com/ZAGENO/z_notifier@0.0.1`
+`pip install git+https://github.com/ZAGENO/z_notifier@0.1.0`
 
 ## Basic Usage
 ```python
@@ -73,7 +73,10 @@ SlackNotifier.send_message(message)  # check slack :)
 ```python
 from z_notifier import register_slack_logger_handler
 
-logger = register_slack_logger_handler('https://hooks.slack.com/services/some-channel-id')
+logger = register_slack_logger_handler(
+    'https://hooks.slack.com/services/some-channel-id',
+    notify_only=(MyCustomException, MyOtherCustomException,)  # optional
+)
 
 logger.warning('something happened!')  # check slack :)
 ```

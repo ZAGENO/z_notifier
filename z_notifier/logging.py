@@ -2,9 +2,6 @@ import logging
 from z_notifier.slack import SlackNotifier, SlackMessage
 
 
-logger = logging.getLogger(__name__)
-
-
 class LoggerSlackHandler(logging.Handler):
     def emit(self, record):
         data = self.mapLogRecord(record)
@@ -86,13 +83,27 @@ class LoggerSlackFormatter(logging.Formatter):
         return record.msg
 
 
-def register_slack_logger_handler(webhook_url):
+class LoggerSlackFilter(logging.Filter):
+    def __init__(self, name='', notify_only=None):
+        self.notify_only = notify_only
+        super().__init__(name=name)
+
+    def filter(self, record):
+        return record.msg.__class__ in self.notify_only
+
+
+def register_slack_logger_handler(webhook_url, *, notify_only=None):
     """
     Register slack handler on logger
     :return logger
     """
+    logger = logging.getLogger(__name__)
     sh = LoggerSlackHandler()
     sh.setFormatter(LoggerSlackFormatter(webhook_url=webhook_url))
+
+    if notify_only:
+        sh.addFilter(LoggerSlackFilter(notify_only=notify_only))
+
     sh.setLevel(logger.level)
     logger.addHandler(sh)
     return logger
