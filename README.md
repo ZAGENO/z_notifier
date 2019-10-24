@@ -45,7 +45,7 @@ Creating separate projects for particular logic implementations is a necessary
 step in this direction.
 
 ## Installation
-`pip install git+https://github.com/ZAGENO/z_notifier@0.0.1`
+`pip install git+https://github.com/ZAGENO/z_notifier@0.1.0`
 
 ## Basic Usage
 ```python
