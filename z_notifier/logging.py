@@ -108,14 +108,14 @@ class LoggerSlackFilter(logging.Filter):
         return record.msg.__class__ in self.notify_only
 
 
-def register_slack_logger_handler(webhook_url, *, notify_only=None):
+def register_slack_logger_handler(webhook_url, *, notify_only=None, config=None):
     """
     Register slack handler on logger
     :return logger
     """
     logger = logging.getLogger(__name__)
     sh = LoggerSlackHandler()
-    sh.setFormatter(LoggerSlackFormatter(webhook_url=webhook_url))
+    sh.setFormatter(LoggerSlackFormatter(webhook_url=webhook_url, config=config))
 
     if notify_only:
         sh.addFilter(LoggerSlackFilter(notify_only=notify_only))

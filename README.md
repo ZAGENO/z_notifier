@@ -45,7 +45,7 @@ Creating separate projects for particular logic implementations is a necessary
 step in this direction.
 
 ## Installation
-`pip install git+https://github.com/ZAGENO/z_notifier@0.1.0`
+`pip install git+https://github.com/ZAGENO/z_notifier@0.2.0`
 
 ## Basic Usage
 ```python
@@ -75,11 +75,25 @@ from z_notifier import register_slack_logger_handler
 
 logger = register_slack_logger_handler(
     'https://hooks.slack.com/services/some-channel-id',
-    notify_only=(MyCustomException, MyOtherCustomException,)  # optional
+    notify_only=(MyCustomException, MyOtherCustomException,),  # optional
+    config={'header': '[[My Arbitrary Header]]', 'pretext': None}  # optional
 )
 
 logger.warning('something happened!')  # check slack :)
 ```
+
+### Formatter Config
+A basic set of options are supported to customise messages by using the argument `config` as a dictionary.
+
+#### header
+* `__exception_class__`
+* `[[arbitrary text surrounded by brakets]]`
+* a valid `LogRecord` attribute name
+* None (to omit this field)
+
+#### pretext
+* a valid `LogRecord` attribute name
+* None (to omit this field)
 
 ## Extend your exceptions to create markdown notifications
 The handler formatter will look for a method `get_slack_text()`
