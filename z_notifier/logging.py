@@ -45,6 +45,14 @@ class LoggerSlackFormatter(logging.Formatter):
 
         return '#8F9491'
 
+    @staticmethod
+    def is_arbitrary_text(text: str):
+        return type(text) is str and text[:2] == '[[' and text[-2:] == ']]'
+
+    @staticmethod
+    def parse_arbitrary_text(text: str):
+        return text[2: -2]
+
     def get_header(self, record):
         """
         Return the header of the slack message attachment
@@ -59,8 +67,8 @@ class LoggerSlackFormatter(logging.Formatter):
                 return record.msg.__class__.__name__
             elif self.config.get('header') == '__exception_msg__' and isinstance(record.msg, Exception):
                 return getattr(record.msg, 'msg', str(record.msg))
-            elif self.config.get('header').startswith('[[') and self.config.get('header')[-2:] == ']]':
-                return self.config.get('header')[2:-2]
+            elif self.is_arbitrary_text(self.config.get('header')):
+                return self.parse_arbitrary_text(self.config.get('header'))
             elif hasattr(record, self.config['header']):
                 return getattr(record, self.config['header'])
 
@@ -78,8 +86,8 @@ class LoggerSlackFormatter(logging.Formatter):
         if 'footer' in self.config:
             if self.config.get('footer') == '__exception_class__' and isinstance(record.msg, Exception):
                 return record.msg.__class__.__name__
-            elif self.config.get('footer').startswith('[[') and self.config.get('footer')[-2:] == ']]':
-                return self.config.get('footer')[2:-2]
+            elif self.is_arbitrary_text(self.config.get('footer')):
+                return self.parse_arbitrary_text(self.config.get('footer'))
 
         return None
 
@@ -88,7 +96,7 @@ class LoggerSlackFormatter(logging.Formatter):
         Return the footer icon URL for the slack message's footer
         This field will return None if footer isn't set up.
         """
-        if 'footer' in self.config and 'footer_url' in self.config:
+        if {'footer', 'footer_url'} <= set(self.config):
             return self.config.get('footer_url')
 
     def get_pretext(self, record):
