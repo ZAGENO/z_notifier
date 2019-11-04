@@ -45,7 +45,9 @@ class SlackLoggerTestCase(unittest.TestCase):
                     'title': 'Log Record Message',
                     'text': 'Log Record Message'
                 }
-            ]
+            ],
+            'footer': None,
+            'footer_url': None,
         })
 
     @patch('z_notifier.SlackNotifier.send_message')

@@ -24,47 +24,80 @@ class LoggerSlackFormatter(logging.Formatter):
         return {
             'webhook_url': self.webhook_url,
             'header': self.get_header(record),
-            'attachments': [{
-                'pretext': self.get_pretext(record),
-                'title': self.get_title(record),
-                'text': self.get_text(record),
-                'color': self.get_color(record)
-            }]
+            'footer': self.get_footer(record),
+            'footer_url': self.get_footer_url(),
+            'attachments': self.get_attachments(record)
         }
 
     @staticmethod
-    def get_color(record):
+    def get_color(levelno):
         """Get colour code based on the severity level of log record"""
-        if record.levelno == logging.DEBUG:
+        if levelno == logging.DEBUG:
             return '#B6B8D6'
-        elif record.levelno == logging.INFO:
+        elif levelno == logging.INFO:
             return '#BBDBD1'
-        elif record.levelno == logging.WARNING:
+        elif levelno == logging.WARNING:
             return '#D5A021'
-        elif record.levelno == logging.ERROR:
+        elif levelno == logging.ERROR:
             return '#EE6352'
-        elif record.levelno == logging.CRITICAL:
+        elif levelno == logging.CRITICAL:
             return '#D62828'
 
         return '#8F9491'
+
+    @staticmethod
+    def is_arbitrary_text(text: str):
+        return type(text) is str and text[:2] == '[[' and text[-2:] == ']]'
+
+    @staticmethod
+    def parse_arbitrary_text(text: str):
+        return text[2: -2]
 
     def get_header(self, record):
         """
         Return the header of the slack message attachment
         Configuration key is prioritised in case it's implemented:
         - __exception_class__: exception class name
+        - __exception_msg__: exception message string
         - [[arbitrary text]]: arbitrary text
         - <valid logging.LogRecord attribute>
         """
         if 'header' in self.config:
             if self.config.get('header') == '__exception_class__' and isinstance(record.msg, Exception):
                 return record.msg.__class__.__name__
-            elif self.config.get('header').startswith('[[') and self.config.get('header')[-2:] == ']]':
-                return self.config.get('header')[2:-2]
+            elif self.config.get('header') == '__exception_msg__' and isinstance(record.msg, Exception):
+                return getattr(record.msg, 'msg', str(record.msg))
+            elif self.is_arbitrary_text(self.config.get('header')):
+                return self.parse_arbitrary_text(self.config.get('header'))
             elif hasattr(record, self.config['header']):
                 return getattr(record, self.config['header'])
 
         return record.msg
+
+    def get_footer(self, record):
+        """
+        Return the footer of the slack message
+        Configuration key is prioritised in case it's implemented:
+        - __exception_class__: exception class name
+        - [[arbitrary text]]: arbitrary text
+
+        No footer is returned if it's not configured.
+        """
+        if 'footer' in self.config:
+            if self.config.get('footer') == '__exception_class__' and isinstance(record.msg, Exception):
+                return record.msg.__class__.__name__
+            elif self.is_arbitrary_text(self.config.get('footer')):
+                return self.parse_arbitrary_text(self.config.get('footer'))
+
+        return None
+
+    def get_footer_url(self):
+        """
+        Return the footer icon URL for the slack message's footer
+        This field will return None if footer isn't set up.
+        """
+        if {'footer', 'footer_url'} <= set(self.config):
+            return self.config.get('footer_url')
 
     def get_pretext(self, record):
         """Return the pretext of the slack message attachment"""
@@ -94,9 +127,41 @@ class LoggerSlackFormatter(logging.Formatter):
             if hasattr(record.msg, 'get_slack_text'):
                 return getattr(record.msg, 'get_slack_text')()  # specific logic
 
-            return repr(record.msg)
+            return str(record.msg)
 
         return record.msg
+
+    def get_attachments(self, record):
+        """
+        Return a list of attachments to be used as part of the slack message payload.
+        If record.msg is an exception implementing a *slack_attachment_payloads* property method
+        the list of attachments is generated from it,
+        otherwise a list with one element based on the record is returned.
+
+        Attributes read if implemented:
+        - slack_attachment_payloads
+        - slack_pretext
+        - slack_text
+        - slack_level
+        """
+        if not hasattr(record.msg, 'slack_attachment_payloads'):
+            return [{
+                'pretext': self.get_pretext(record),
+                'title': self.get_title(record),
+                'text': self.get_text(record),
+                'color': self.get_color(record.levelno)
+            }]
+
+        return [
+            {
+                'pretext': getattr(e, 'slack_pretext', None),
+                'title': e.msg,
+                'text': getattr(e, 'slack_text', None),
+                'color': self.get_color(getattr(e, 'slack_level', logging.ERROR))
+            }
+            for e
+            in getattr(record.msg, 'slack_attachment_payloads', [])
+        ]
 
 
 class LoggerSlackFilter(logging.Filter):
