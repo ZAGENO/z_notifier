@@ -37,7 +37,7 @@ encourages the developer to deliver a higher quality work, having to respect
 community standards by increasing the project's transparency and exposition to the world.
 
 ## Installation
-`pip install git+ssh://git@github.com/ZAGENO/z_notifier.git@0.3.3`
+`pip install git+ssh://git@github.com/ZAGENO/z_notifier.git@0.3.4`
 
 ## Basic Usage
 ```python

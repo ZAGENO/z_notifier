@@ -144,7 +144,7 @@ class LoggerSlackFormatter(logging.Formatter):
                 'pretext': self.get_pretext(record.msg),
                 'title': self.get_title(record.msg),
                 'text': self.get_text(record.msg),
-                'color': self.get_color(record.levelno)
+                'color': self.get_color(getattr(record.msg, 'slack_level', record.levelno))
             }]
 
         return [
