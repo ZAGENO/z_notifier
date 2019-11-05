@@ -99,37 +99,32 @@ class LoggerSlackFormatter(logging.Formatter):
         if {'footer', 'footer_url'} <= set(self.config):
             return self.config.get('footer_url')
 
-    def get_pretext(self, record):
+    def get_pretext(self, msg):
         """Return the pretext of the slack message attachment"""
         if 'pretext' in self.config:
             if not self.config.get('pretext'):
                 return None
 
-            return getattr(record, self.config['pretext'])
+        return getattr(msg, 'slack_pretext', str(msg))
 
-        return record.levelname
-
-    @staticmethod
-    def get_title(record):
+    def get_title(self, msg):
         """Return the title of the slack message attachment, which is the string representation of the exception"""
-        if isinstance(record.msg, Exception):
-            return str(record.msg)
+        if 'title' in self.config:
+            if not self.config.get('title'):
+                return None
 
-        return record.msg
+        return getattr(msg, 'slack_title', str(msg))
 
-    @staticmethod
-    def get_text(record):
+    def get_text(self, msg):
         """
         Return the text of the slack message attachment, which is the text representation of the exception.
         If the exception instance implements the method `get_slack_text`, it is used as part of the slack payload.
         """
-        if isinstance(record.msg, Exception):
-            if hasattr(record.msg, 'get_slack_text'):
-                return getattr(record.msg, 'get_slack_text')()  # specific logic
+        if 'text' in self.config:
+            if not self.config.get('text'):
+                return None
 
-            return str(record.msg)
-
-        return record.msg
+        return getattr(msg, 'slack_text', str(msg))
 
     def get_attachments(self, record):
         """
@@ -146,17 +141,17 @@ class LoggerSlackFormatter(logging.Formatter):
         """
         if not hasattr(record.msg, 'slack_attachment_payloads'):
             return [{
-                'pretext': self.get_pretext(record),
-                'title': self.get_title(record),
-                'text': self.get_text(record),
+                'pretext': self.get_pretext(record.msg),
+                'title': self.get_title(record.msg),
+                'text': self.get_text(record.msg),
                 'color': self.get_color(record.levelno)
             }]
 
         return [
             {
-                'pretext': getattr(e, 'slack_pretext', None),
-                'title': e.msg,
-                'text': getattr(e, 'slack_text', None),
+                'pretext': self.get_pretext(e),
+                'title': self.get_title(e),
+                'text': self.get_text(e),
                 'color': self.get_color(getattr(e, 'slack_level', logging.ERROR))
             }
             for e

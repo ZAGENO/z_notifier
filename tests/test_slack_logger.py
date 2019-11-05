@@ -41,7 +41,7 @@ class SlackLoggerTestCase(unittest.TestCase):
             'attachments': [
                 {
                     'color': '#D5A021',
-                    'pretext': 'WARNING',
+                    'pretext': 'Log Record Message',
                     'title': 'Log Record Message',
                     'text': 'Log Record Message'
                 }
