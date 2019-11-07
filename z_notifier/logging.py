@@ -1,16 +1,36 @@
 import logging
+from z_notifier.async_helpers import ensure_event_loop
 from z_notifier.slack import SlackNotifier, SlackMessage
 
 
 class LoggerSlackHandler(logging.Handler):
+    def __init__(self, level=logging.NOTSET, asynchronous=False, event_loop=None):
+        self.slack_notifier = SlackNotifier(asynchronous=asynchronous, event_loop=event_loop)
+        self.asynchronous = asynchronous
+        self.event_loop = event_loop
+        super().__init__(level)
+
     def emit(self, record):
         data = self.mapLogRecord(record)
         message = SlackMessage.from_dict(data)
-        SlackNotifier.send_message(message=message)
+        response = self.slack_notifier.send_message(message=message)
+        if self.asynchronous:
+            self.event_loop.run_until_complete(response)
 
     def mapLogRecord(self, record):
         payload = self.format(record)
         return payload
+
+    def handle(self, record):
+        """
+        This handler doesn't need to acquire/release IO lock
+        """
+        rv = self.filter(record)
+
+        if rv:
+            self.emit(record)
+
+        return rv
 
 
 class LoggerSlackFormatter(logging.Formatter):
@@ -72,7 +92,7 @@ class LoggerSlackFormatter(logging.Formatter):
             elif hasattr(record, self.config['header']):
                 return getattr(record, self.config['header'])
 
-        return record.msg
+        return str(record.msg)
 
     def get_footer(self, record):
         """
@@ -105,7 +125,7 @@ class LoggerSlackFormatter(logging.Formatter):
             if not self.config.get('pretext'):
                 return None
 
-        return getattr(msg, 'slack_pretext', str(msg))
+        return getattr(msg, 'slack_pretext', None)
 
     def get_title(self, msg):
         """Return the title of the slack message attachment, which is the string representation of the exception"""
@@ -113,7 +133,7 @@ class LoggerSlackFormatter(logging.Formatter):
             if not self.config.get('title'):
                 return None
 
-        return getattr(msg, 'slack_title', str(msg))
+        return getattr(msg, 'slack_title', None)
 
     def get_text(self, msg):
         """
@@ -168,18 +188,19 @@ class LoggerSlackFilter(logging.Filter):
         return record.msg.__class__ in self.notify_only
 
 
-def register_slack_logger_handler(webhook_url, *, notify_only=None, config=None):
+def register_slack_logger_handler(webhook_url, *, asynchronous=False, notify_only=None, config=None, event_loop=None):
     """
     Register slack handler on logger
     :return logger
     """
     logger = logging.getLogger(__name__)
-    sh = LoggerSlackHandler()
+    sh = LoggerSlackHandler(asynchronous=asynchronous, event_loop=event_loop or ensure_event_loop())
     sh.setFormatter(LoggerSlackFormatter(webhook_url=webhook_url, config=config))
+    sh.setLevel(logger.level)
 
     if notify_only:
         sh.addFilter(LoggerSlackFilter(notify_only=notify_only))
 
-    sh.setLevel(logger.level)
     logger.addHandler(sh)
+
     return logger

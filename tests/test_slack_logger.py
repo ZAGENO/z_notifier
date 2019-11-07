@@ -41,8 +41,8 @@ class SlackLoggerTestCase(unittest.TestCase):
             'attachments': [
                 {
                     'color': '#D5A021',
-                    'pretext': 'Log Record Message',
-                    'title': 'Log Record Message',
+                    'pretext': None,
+                    'title': None,
                     'text': 'Log Record Message'
                 }
             ],
@@ -72,7 +72,7 @@ class SlackLoggerTestCase(unittest.TestCase):
         formatter = LoggerSlackFormatter(webhook_url=self.webhook_url, config={'pretext': 'msg'})
         formatted = formatter.format(log_record)
 
-        self.assertEqual(formatted['attachments'][0]['pretext'], 'some msg')
+        self.assertEqual(formatted['attachments'][0]['pretext'], None)
 
         formatter = LoggerSlackFormatter(webhook_url=self.webhook_url, config={'header': '__exception_class__'})
         log_record = logging.LogRecord('name', logging.DEBUG, None, None, ValueError('some value error'), None, None)
