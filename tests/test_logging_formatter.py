@@ -30,6 +30,10 @@ class ExtendedException(Exception):
         """Error level given by logging package"""
         return self.level
 
+    @property
+    def slack_title(self):
+        return self.msg
+
     def __str__(self):
         return self.msg
 

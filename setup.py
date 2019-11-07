@@ -9,10 +9,12 @@ exec(open("version.py").read())
 pwd = os.path.abspath(os.path.dirname(__file__))
 long_description = ""
 with codecs.open(os.path.join(pwd, "README.md"), encoding="utf-8") as readme:
-    long_description = readme.read()
+    long_description += readme.read()
 
 install_requires = ['requests>=2.22.0']
-tests_require = ["pytest", "pytest-cov", "codecov", "flake8", "black"]
+tests_require = ["pytest", "pytest-cov", "codecov", "asynctest", "pytest-asyncio", "pytest-aiohttp", "aresponses",
+                 "flake8", "black",
+                 "aiohttp", "cchardet", "aiodns"]
 
 setup(
     name="z_notifier",

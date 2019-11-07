@@ -1,3 +1,7 @@
+import asyncio
+import logging
+import aiohttp
+from z_notifier.async_helpers import ensure_event_loop
 from z_notifier.exceptions import SlackPayloadError
 from datetime import datetime
 import requests
@@ -153,7 +157,40 @@ class SlackMessage:
 
 
 class SlackNotifier:
+    def __init__(self, asynchronous=False, event_loop=None):
+        self.asynchronous = asynchronous
+        if self.asynchronous:
+            if not event_loop:
+                self.event_loop = ensure_event_loop()
+                asyncio.set_event_loop(self.event_loop)
+            else:
+                self.event_loop = event_loop
+            self.event_loop.set_exception_handler(self.handle_exception)
+
     @staticmethod
-    def send_message(message: SlackMessage):
-        """Submit message payload to Slack API"""
-        requests.post(message.webhook_url, json=message.payload)
+    def sync_send_message(message: SlackMessage):
+        return requests.post(message.webhook_url, json=message.payload)
+
+    async def async_send_message(self, message: SlackMessage):
+        async with aiohttp.ClientSession(loop=self.event_loop) as session:
+            async with session.post(message.webhook_url, json=message.payload) as response:
+                return await response.text()  # actually I don't need the response
+
+    def send_message(self, message: SlackMessage):
+        """
+        Submit message payload to Slack API
+        If asynchronous is True:
+        A task is created using the event loop and returned to be executed later.
+        """
+        if not self.asynchronous:
+            return self.sync_send_message(message)
+
+        return self.async_send_message(message)
+
+    @staticmethod
+    async def log_exception(exception):
+        logging.exception(exception)
+
+    def handle_exception(self, context):
+        msg = context.get("exception", context["message"])
+        self.event_loop.call_soon(self.log_exception, msg)
